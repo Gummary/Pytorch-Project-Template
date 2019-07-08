@@ -9,23 +9,27 @@ Main
 """
 
 import argparse
-from utils.config import *
+from utils.logger import setup_logging
+from configs import update_config
+from configs import config
 
 from agents import *
 
-
-def main():
-    # parse the path of the json config file
-    arg_parser = argparse.ArgumentParser(description="")
-    arg_parser.add_argument(
+def parse_args():
+    parser = argparse.ArgumentParser(description="")
+    parser.add_argument(
         'config',
         metavar='config_json_file',
         default='None',
         help='The Configuration file in json format')
-    args = arg_parser.parse_args()
+    return parser.parse_args()
+    
 
-    # parse the config json file
-    config = process_config(args.config)
+def main():
+
+    args = parse_args()
+    config = update_config(config, args.config)
+    setup_logging(config.log_dir)
 
     # Create the Agent and pass all the configuration to it then run it..
     agent_class = globals()[config.agent]
