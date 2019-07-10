@@ -15,7 +15,11 @@ _C.LOG_DIR = ''
 _C.EXP_DIR = 'experiments'
 _C.AGENT = ''
 
-
+_C.DATASET = CN()
+_C.DATASET.ROOT = 'data/'
+_C.DATASET.TRAIN_SET = 'train'
+_C.DATASET.TEST_SET = 'val'
+_C.DATASET.NUM_CLASSES = 16
 
 
 
