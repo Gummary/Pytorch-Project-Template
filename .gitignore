@@ -103,6 +103,9 @@ ENV/
 # Pycharm
 .idea/
 
+# Vscode
+./vscode
+
 # Experiments
 experiments/*
 !experiments/.keep

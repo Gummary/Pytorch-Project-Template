@@ -1,2 +1,2 @@
 
-from .default import cfg
+from .default import config
