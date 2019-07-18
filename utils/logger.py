@@ -29,7 +29,7 @@ def setup_logging(config):
     console_handler.setFormatter(Formatter(log_console_format))
 
     exp_file_handler = RotatingFileHandler(
-        os.path.join(log_dir, '{:%Y-%m-%d}.log'.format(datetime.now())), 
+        os.path.join(log_dir, '{:%Y-%m-%d-%H-%M-%S}.log'.format(datetime.now())), 
         maxBytes=10**6, 
         backupCount=5)
     exp_file_handler.setLevel(logging.DEBUG)

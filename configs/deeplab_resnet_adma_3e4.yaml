@@ -8,35 +8,36 @@ DATASET:
   NUM_CLASSES: 16
   ROOT: data/
   TEST_SET: test
-  VAL_SET: val
   TRAIN_SET: train
-EXPNAME: unet_test1
+  VAL_SET: val
+EXPNAME: deeplab_resnet_adam_3e4
 EXP_DIR: experiments
 GPUS: (0,)
 LOG_DIR: logs
 LOSS:
   CLASS_BALANCE: False
   OHEMKEEP: 100000
-  OHEMTHRES: 0.7
+  OHEMTHRES: 0.9
   USE_OHEM: True
 MODEL:
-  NAME: unet
+  NAME: dl_resnet
   PRETRAINED: ''
+  OS: 16
 OUTPUT_DIR: output
 SUMMARY_DIR: summary
 TEST:
   BATCH_SIZE_PER_GPU: 8
 TRAIN:
   BATCH_SIZE_PER_GPU: 8
-  EPOCH: 200
-  EXTRA_LR: 0.01
+  EPOCH: 210
+  EXTRA_LR: 0.001
   IMAGE_SIZE: (256, 256)
   LR: 0.0003
   LR_FACTOR: 0.1
-  LR_STEP: [90, 110]
+  LR_STEP: [170, 200]
   MOMENTUM: 0.9
   NESTEROV: False
-  OPTIMIZER: sgd
+  OPTIMIZER: adam
   SHUFFLE: True
   WD: 0.0001
 WORKERS: 4

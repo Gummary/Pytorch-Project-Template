@@ -9,6 +9,7 @@ import torch
 torch.manual_seed(0)
 from torch.utils.data import Dataset
 
+from utils.train_utils import visualize_images
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,8 @@ class RssraiDataset(Dataset):
             self.data_path = os.path.join(config.ROOT, config.TRAIN_SET)
         elif dataset == 'test':
             self.data_path = os.path.join(config.ROOT, config.TEST_SET)
+        elif dataset == 'val':
+            self.data_path = os.path.join(config.ROOT, config.VAL_SET)
 
         self.lbl2pixel, self.pixel2lbl = self.generate_label_mapping()
 
@@ -79,8 +82,8 @@ class RssraiDataset(Dataset):
     def __input_transform__(self, image):
         image = image.astype(np.float32)[:, :, ::-1]
         image = image / 255.0
-        image -= self.mean
-        image /= self.std
+        # image -= self.mean
+        # image /= self.std
         return image
 
     def __generate_target__(self, label):

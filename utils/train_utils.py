@@ -4,6 +4,10 @@ from torch.backends import cudnn
 from torch.autograd import Variable
 import math
 
+import matplotlib.pyplot as plt
+
+import numpy as np
+
 """
 Learning rate adjustment used for CondenseNet model training
 """
@@ -18,3 +22,16 @@ def adjust_learning_rate(optimizer, epoch, config, batch=None, nBatch=None, meth
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
     return lr
+
+def visualize_images(images):
+    num_images = len(images)
+    num_cols = 3
+    num_rows = num_images // num_cols + 1
+    figure = plt.figure()    
+    for i in range(num_images):
+        ax = figure.add_subplot(num_rows, num_cols, i+1)
+        ax.imshow(images[i])
+    plt.show()
+
+
+
