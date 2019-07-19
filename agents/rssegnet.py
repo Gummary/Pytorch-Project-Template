@@ -20,7 +20,8 @@ from datasets.rssrai import RssraiDataset
 from utils.modelsummary import get_model_summary
 from graphs.losses.criterion import OhemCrossEntropy, CrossEntropy
 from graphs.models.unet import UNet
-from graphs.models.deeplab_xception import DeepLabv3_plus
+from graphs.models.deeplab_xception import DeepLabv3_plus as DeepLabv3_plus_xce
+from graphs.models.deeplab_resnet import DeepLabv3_plus as DeepLabv3_plus_res
 from graphs.weights_initializer import init_model_weights
 
 from tensorboardX import SummaryWriter
@@ -44,7 +45,7 @@ class RsSegNetAgent(BaseAgent):
         cudnn.enabled = config.CUDNN.ENABLED
         gpus = list(config.GPUS)
 
-        writer_dict = {
+        self.writer_dict = {
             'writer': SummaryWriter(config.SUMMARY_DIR),
             'train_global_steps': 0,
             'valid_global_steps': 0,
@@ -58,15 +59,15 @@ class RsSegNetAgent(BaseAgent):
         if config.MODEL.NAME == 'unet':
             self.model = UNet(3, config.DATASET.NUM_CLASSES)
         elif config.MODEL.NAME == 'dl_resnet':
-            self.model = DeepLabv3_plus(3, 
+            self.model = DeepLabv3_plus_res(3, 
             n_classes=config.DATASET.NUM_CLASSES, 
             os=config.MODEL.OS,
             pretrained=True)
-
-        init_model_weights(self.model) 
-        if os.path.exists(os.path.join(config.CHECKPOINT_DIR, 'checkpoint.pth.tar')):
-            logger.info("=> Loading weights from :"+os.path.join(config.CHECKPOINT_DIR, 'checkpoint.pth.tar'))
-            self.load_checkpoint(os.path.join(config.CHECKPOINT_DIR, 'checkpoint.pth.tar'))
+        elif config.MODEL.NAME == 'dl_xception':
+            self.model = DeepLabv3_plus_xce(3, 
+            n_classes=config.DATASET.NUM_CLASSES, 
+            os=config.MODEL.OS,
+            pretrained=True)
 
         dump_input = torch.rand(
             (1, 3, config.TRAIN.IMAGE_SIZE[1], config.TRAIN.IMAGE_SIZE[0])
@@ -131,6 +132,11 @@ class RsSegNetAgent(BaseAgent):
         self.current_epoch = self.start_epoch
         self.end_epoch = config.TRAIN.EPOCH
 
+        init_model_weights(self.model) 
+        if config.TRAIN.AUTO_RESUME:
+            logger.info("=> Loading weights from :"+os.path.join(config.CHECKPOINT_DIR, 'checkpoint.pth.tar'))
+            self.load_checkpoint(os.path.join(config.CHECKPOINT_DIR, 'checkpoint.pth.tar'))
+
         self.best_mIoU = -1
 
 
@@ -147,8 +153,10 @@ class RsSegNetAgent(BaseAgent):
             self.model.load_state_dict(checkpoint['state_dict'])
 
             self.optimizer.load_state_dict(checkpoint['optimizer'])
+            self.current_epoch = checkpoint['epoch']
             logger.info("=> loaded checkpoint '{}' (epoch {})".format(
                 file_name, checkpoint['epoch']))
+            
 
     def save_checkpoint(self, file_name="checkpoint.pth.tar", is_best=False):
         """
@@ -205,6 +213,7 @@ class RsSegNetAgent(BaseAgent):
         data_time = AverageMeter()
         batch_time = AverageMeter()
         end = time.time()
+        metrics = IOUMetric(self.num_classes)
         for i_iter, batch in enumerate(self.trainloader):
 
             data_time.update(time.time() - end)
@@ -217,13 +226,26 @@ class RsSegNetAgent(BaseAgent):
             self.optimizer.step()
             epoch_loss.update(loss.item())
             batch_time.update(time.time() - end)
+
+            _, pred_max = torch.max(pred, 1)
+            metrics.add_batch(pred_max.cpu().numpy(), labels.cpu().numpy())
             if i_iter % 5 == 0:
+                epoch_acc, _, epoch_iou_class, epoch_mean_iou, _ = metrics.evaluate()
                 msg = 'Epoch: [{0}][{1}/{2}]\t' \
                     'Time {batch_time.val:.3f}s ({batch_time.avg:.3f}s)\t' \
                     'Data {data_time.val:.3f}s ({data_time.avg:.3f}s)\t' \
-                    'Loss {loss.val:.5f} ({loss.avg:.5f})\t'.format(
+                    'Loss {loss.val:.5f} ({loss.avg:.5f})\t' \
+                    'MIOU {epoch_mean_iou}'.format(
                         self.current_epoch, i_iter, len(self.trainloader), batch_time=batch_time,
-                        data_time=data_time, loss=epoch_loss)
+                        data_time=data_time, loss=epoch_loss, epoch_mean_iou=epoch_mean_iou)
+
+                writer = self.writer_dict['writer']
+                global_steps = self.writer_dict['train_global_steps']
+                writer.add_scalar('train_loss', epoch_loss.val, global_steps)
+                writer.add_scalar('train_acc', epoch_acc, global_steps)
+                writer.add_scalar('train_mean_iou', epoch_mean_iou, global_steps)
+                self.writer_dict['train_global_steps'] = global_steps + 1
+                
                 logger.info(msg)
         
 
@@ -253,6 +275,14 @@ class RsSegNetAgent(BaseAgent):
                 metrics.add_batch(pred_max.cpu().numpy(), labels.cpu().numpy())
 
         epoch_acc, _, epoch_iou_class, epoch_mean_iou, _ = metrics.evaluate()
+
+        writer = self.writer_dict['writer']
+        global_steps = self.writer_dict['valid_global_steps']
+        writer.add_scalar('val_loss', ave_loss.val, global_steps)
+        writer.add_scalar('val_acc', epoch_acc, global_steps)
+        writer.add_scalar('val_mean_iou', epoch_mean_iou, global_steps)
+        self.writer_dict['valid_global_steps'] = global_steps + 1
+
         return ave_loss.val, epoch_mean_iou
 
     def finalize(self):

@@ -16,6 +16,7 @@ from datasets.rssrai import RssraiDataset
 
 
 from agents import *
+from graphs.models.deeplab_resnet import DeepLabv3_plus
 
 def parse_args():
     parser = argparse.ArgumentParser(description="")
@@ -59,8 +60,11 @@ def main():
         pin_memory=True,
         drop_last=True)
 
-    model = UNet(3, config.DATASET.NUM_CLASSES)
-    model.load_state_dict(torch.load("experiments\\unet_test1\\checkpoint\\best.pth.tar"))
+    model = DeepLabv3_plus(3, 
+            n_classes=config.DATASET.NUM_CLASSES, 
+            os=config.MODEL.OS,
+            pretrained=True)
+    model.load_state_dict(torch.load("experiments\\deeplab_resnet_adam_3e4\\checkpoint\\best.pth.tar"))
     model.cuda()
     model.eval()
 

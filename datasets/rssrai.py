@@ -82,8 +82,8 @@ class RssraiDataset(Dataset):
     def __input_transform__(self, image):
         image = image.astype(np.float32)[:, :, ::-1]
         image = image / 255.0
-        # image -= self.mean
-        # image /= self.std
+        image -= self.mean
+        image /= self.std
         return image
 
     def __generate_target__(self, label):
