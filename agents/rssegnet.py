@@ -74,7 +74,11 @@ class RsSegNetAgent(BaseAgent):
         )
         logger.info(get_model_summary(self.model.cuda(), dump_input.cuda()))
 
-        self.train_dataset = RssraiDataset('train', config.DATASET)
+        self.train_dataset = RssraiDataset(
+            'train', 
+            config.DATASET, 
+            mean=[0.2797, 0.3397, 0.3250], 
+            std=[0.1271, 0.1446, 0.1320])
         self.trainloader = torch.utils.data.DataLoader(
             self.train_dataset,
             batch_size=config.TRAIN.BATCH_SIZE_PER_GPU*len(gpus),
@@ -83,7 +87,9 @@ class RsSegNetAgent(BaseAgent):
             pin_memory=True,
             drop_last=True)
 
-        self.test_dataset = RssraiDataset('val', config.DATASET)
+        self.test_dataset = RssraiDataset('val', config.DATASET,
+            mean=[0.2797, 0.3397, 0.3250], 
+            std=[0.1271, 0.1446, 0.1320])
         self.testloader = torch.utils.data.DataLoader(
             self.test_dataset,
             batch_size=config.TEST.BATCH_SIZE_PER_GPU*len(gpus),
@@ -134,7 +140,6 @@ class RsSegNetAgent(BaseAgent):
 
         init_model_weights(self.model) 
         if config.TRAIN.AUTO_RESUME:
-            logger.info("=> Loading weights from :"+os.path.join(config.CHECKPOINT_DIR, 'checkpoint.pth.tar'))
             self.load_checkpoint(os.path.join(config.CHECKPOINT_DIR, 'checkpoint.pth.tar'))
 
         self.best_mIoU = -1
@@ -148,6 +153,7 @@ class RsSegNetAgent(BaseAgent):
         :return:
         """
         if os.path.exists(file_name):
+            logger.info("=> Loading weights from :"+file_name)
             checkpoint = torch.load(file_name)
             self.begin_epoch = checkpoint['epoch']
             self.model.load_state_dict(checkpoint['state_dict'])
@@ -229,7 +235,7 @@ class RsSegNetAgent(BaseAgent):
 
             _, pred_max = torch.max(pred, 1)
             metrics.add_batch(pred_max.cpu().numpy(), labels.cpu().numpy())
-            if i_iter % 5 == 0:
+            if i_iter % 20 == 0:
                 epoch_acc, _, epoch_iou_class, epoch_mean_iou, _ = metrics.evaluate()
                 msg = 'Epoch: [{0}][{1}/{2}]\t' \
                     'Time {batch_time.val:.3f}s ({batch_time.avg:.3f}s)\t' \

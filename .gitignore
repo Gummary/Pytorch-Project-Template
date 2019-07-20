@@ -114,6 +114,8 @@ experiments/*
 pretrained_weights/*
 !pretrained_weights/.keep
 
+.vscode/*
+
 # Data
 data/*
 !data/.keep
